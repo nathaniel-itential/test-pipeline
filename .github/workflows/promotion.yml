@@ -74,17 +74,17 @@ jobs:
           tar -xzf ipctl-linux-x86_64.tar.gz
           sudo mv ipctl /usr/local/bin/
 
+      - name: Configure ipctl
+        env:
+          HOST: ${{ secrets.PLATFORM_HOST }}
+          CLIENT_ID: ${{ secrets.PLATFORM_CLIENT_ID }}
+          CLIENT_SECRET: ${{ secrets.PLATFORM_CLIENT_SECRET }}
+        run: |
+          printf '[profile default]\nhost = %s\nport = 0\nuse_tls = true\nclient_id = %s\nclient_secret = %s\n' \
+            "$HOST" "$CLIENT_ID" "$CLIENT_SECRET" > /tmp/ipctl.ini
+
       - name: Import integration models
         env:
-          # ipctl-ci.ini only declares the "[profile ci]" section — it holds no
-          # secrets. The section must exist for ipctl to apply env var overrides
-          # to a named profile; the "default" profile doesn't support this.
-          IPCTL_CONFIG_FILE: .github/scripts/ipctl-ci.ini
-          IPCTL_APPLICATION_DEFAULT_PROFILE: ci
-          IPCTL_PROFILE_CI_HOST: ${{ secrets.PLATFORM_HOST }}
-          IPCTL_PROFILE_CI_PORT: "0"
-          IPCTL_PROFILE_CI_USE_TLS: "true"
-          IPCTL_PROFILE_CI_CLIENT_ID: ${{ secrets.PLATFORM_CLIENT_ID }}
-          IPCTL_PROFILE_CI_CLIENT_SECRET: ${{ secrets.PLATFORM_CLIENT_SECRET }}
+          IPCTL_CONFIG_FILE: /tmp/ipctl.ini
           CHANGED_SPECS: ${{ needs.diff.outputs.changed_specs }}
         run: bash .github/scripts/deploy_integrations.sh
