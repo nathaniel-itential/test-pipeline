@@ -24,6 +24,7 @@ jobs:
               ref: refs/pull/${{ github.event.pull_request.number }}/merge
               fetch-depth: 0
               path: pr
+              allow-unsafe-pr-checkout: true
 
           - name: Find changed files
             id: diff
@@ -47,6 +48,7 @@ jobs:
             with:
               ref: refs/pull/${{ github.event.pull_request.number }}/merge
               path: pr
+              allow-unsafe-pr-checkout: true
 
           - name: Set up Python
             uses: actions/setup-python@v5
@@ -81,6 +83,7 @@ jobs:
             with:
               ref: refs/pull/${{ github.event.pull_request.number }}/merge
               path: pr
+              allow-unsafe-pr-checkout: true
 
           - name: Install ipctl
             run: |
