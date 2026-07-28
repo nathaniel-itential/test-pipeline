@@ -58,24 +58,6 @@ jobs:
           - name: Install asyncplatform
             run: pip install git+https://github.com/nathaniel-itential/asyncplatform.git@feat-agent-project
 
-          - name: Debug agent-project-service reachability
-            env:
-              HOST: ${{ secrets.PLATFORM_HOST }}
-              CLIENT_ID: ${{ secrets.PLATFORM_CLIENT_ID }}
-              CLIENT_SECRET: ${{ secrets.PLATFORM_CLIENT_SECRET }}
-            run: |
-              TOKEN=$(curl -s -X POST "https://$HOST/oauth/token" \
-                -H "Content-Type: application/x-www-form-urlencoded" \
-                -d "grant_type=client_credentials&client_id=$CLIENT_ID&client_secret=$CLIENT_SECRET" \
-                | python3 -c "import sys, json; print(json.load(sys.stdin).get('access_token', ''))")
-              STATUS=$(curl -s -o /tmp/agent_project_debug.json -w "%{http_code}" \
-                -X POST "https://$HOST/agent-project-service/project-bundles/import" \
-                -H "Content-Type: application/json" \
-                -H "Authorization: Bearer $TOKEN" \
-                -d '{}')
-              echo "Status code: $STATUS"
-              cat /tmp/agent_project_debug.json
-
           - name: Deploy to Staging
             working-directory: pr
             env:
@@ -86,7 +68,7 @@ jobs:
               CHANGED_FILES: ${{ needs.diff.outputs.changed_files }}
             run: python "$GITHUB_WORKSPACE/.github/scripts/deploy.py" Staging
 
-    deploy-integrations-production:
+    validate-integrations:
         needs: [diff]
         if: needs.diff.outputs.has_spec_changes == 'true'
         runs-on: ubuntu-latest
