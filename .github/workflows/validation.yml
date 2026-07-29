@@ -1,13 +1,12 @@
 name: Itential Asset & Integration Validation
 
 on:
-  pull_request_target:
-    types: [opened]
-    branches:
-      - main
+  pull_request_review:
+    types: [submitted]
 
 jobs:
     diff:
+        if: github.event.review.state == 'approved' && github.event.pull_request.base.ref == 'main'
         runs-on: ubuntu-latest
         outputs:
           has_asset_changes: ${{ steps.diff.outputs.has_asset_changes }}
