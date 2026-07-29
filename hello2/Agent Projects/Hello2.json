@@ -1,0 +1,12 @@
+{
+  "_id": "ba892aa6-9233-4e40-9867-96a827896ac3",
+  "name": "Hello2",
+  "description": "",
+  "agentProjectBundleVersion": 1,
+  "created": "2026-07-29T17:45:22.645Z",
+  "createdBy": {
+    "provenance": "CloudAAA",
+    "username": "nathaniel.acosta@itential.com"
+  },
+  "agents": []
+}
