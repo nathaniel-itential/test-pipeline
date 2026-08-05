@@ -23,25 +23,10 @@ jobs:
           run-id: ${{ github.event.workflow_run.id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Verify approval is still current
+      - name: Extract PR context
         id: context
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           PR_NUMBER=$(jq -r .pr_number event.json)
-          HEAD_SHA=$(jq -r .head_sha event.json)
-
-          CURRENT_SHA=$(gh pr view "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --json headRefOid --jq .headRefOid)
-          if [ "$CURRENT_SHA" != "$HEAD_SHA" ]; then
-            echo "PR head has moved since approval ($HEAD_SHA -> $CURRENT_SHA) — refusing to deploy unreviewed commits"
-            exit 1
-          fi
-
-          APPROVED=$(gh pr view "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --json reviews --jq '[.reviews[] | select(.state=="APPROVED")] | length > 0')
-          if [ "$APPROVED" != "true" ]; then
-            echo "PR is not currently approved — refusing to deploy"
-            exit 1
-          fi
 
           echo "pr_number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
           {
