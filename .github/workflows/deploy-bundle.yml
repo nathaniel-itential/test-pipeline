@@ -1,0 +1,91 @@
+name: Itential Asset & Integration Deploy Bundle
+
+on:
+  workflow_call:
+    inputs:
+      pr_number:
+        description: "Pull request number to deploy"
+        required: true
+        type: string
+      bundle_name:
+        description: "Name of the bundle being deployed"
+        required: true
+        type: string
+      changed:
+        description: "JSON array of {path, type} objects to import for this bundle"
+        required: true
+        type: string
+
+run-name: "Deploy bundle: ${{ inputs.bundle_name }} (PR #${{ inputs.pr_number }})"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: staging
+
+    steps:
+      - name: Checkout trusted scripts
+        uses: actions/checkout@v4
+
+      - name: Checkout approved PR content
+        uses: actions/checkout@v4
+        with:
+          ref: refs/pull/${{ inputs.pr_number }}/merge
+          path: pr
+          allow-unsafe-pr-checkout: true
+
+      - name: Install ipctl
+        run: |
+          curl -LO "https://github.com/itential/ipctl/releases/latest/download/ipctl-linux-x86_64.tar.gz"
+          tar -xzf ipctl-linux-x86_64.tar.gz
+          sudo mv ipctl /usr/local/bin/
+
+      - name: Configure ipctl
+        env:
+          HOST: ${{ secrets.PLATFORM_HOST }}
+          CLIENT_ID: ${{ secrets.PLATFORM_CLIENT_ID }}
+          CLIENT_SECRET: ${{ secrets.PLATFORM_CLIENT_SECRET }}
+        run: |
+          printf '[profile default]\nhost = %s\nport = 0\nuse_tls = true\nclient_id = %s\nclient_secret = %s\n' \
+            "$HOST" "$CLIENT_ID" "$CLIENT_SECRET" > /tmp/ipctl.ini
+
+      - name: Import bundle assets
+        working-directory: pr
+        env:
+          IPCTL_CONFIG_FILE: /tmp/ipctl.ini
+          CHANGED: ${{ inputs.changed }}
+        run: |
+          declare -A NOUN_FOR_TYPE=(
+            ["Studio Projects"]="project"
+            ["Automations"]="automation"
+            ["Golden Configs"]="gctree"
+            ["Agent Projects"]="agent-project"
+            ["LCM Resource Models"]="template"
+            ["OpenAPIs"]="integration-model"
+          )
+
+          failed=0
+          while IFS= read -r item; do
+            path=$(jq -r '.path' <<< "$item")
+            type=$(jq -r '.type' <<< "$item")
+            noun="${NOUN_FOR_TYPE[$type]}"
+
+            if [ -z "$noun" ]; then
+              echo "❌ Unknown asset type '$type' for $path — skipping"
+              failed=$((failed + 1))
+              continue
+            fi
+
+            echo "📥 Importing $type: $path"
+            if ipctl import "$noun" "$path" --replace; then
+              echo "✅ Successfully imported: $path"
+            else
+              echo "❌ Failed to import: $path"
+              failed=$((failed + 1))
+            fi
+          done < <(jq -c '.[]' <<< "$CHANGED")
+
+          if [ "$failed" -gt 0 ]; then
+            echo "❌ $failed item(s) failed to import"
+            exit 1
+          fi

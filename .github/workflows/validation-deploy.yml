@@ -1,9 +1,7 @@
 name: Itential Asset & Integration Deploy
 
 on:
-  workflow_run:
-    workflows: ["Itential Asset & Integration Validation"]
-    types: [completed]
+  workflow_dispatch: {}
 
 jobs:
   load-context:

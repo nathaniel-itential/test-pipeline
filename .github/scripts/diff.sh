@@ -7,47 +7,47 @@ INTEGRATION_MODELS_DIR="OpenAPIs"
 
 echo "Diffing against merge base $BASE_SHA"
 
-# ── Asset diff ────────────────────────────────────────────────────────────────
-# core.quotePath=false prevents git from quoting paths that contain spaces
-CHANGED_FILES=$(git -c core.quotePath=false diff --name-only --diff-filter=AM "$BASE_SHA" HEAD \
-  | { grep -E "(${ASSET_DIRS})/.*\.json$" || true; } | jq -R . | jq -sc .)
-echo "changed_files: $CHANGED_FILES"
-{
-  echo "changed_files<<EOF"
-  echo "$CHANGED_FILES"
-  echo "EOF"
-} >> "$GITHUB_OUTPUT"
-count=$(echo "$CHANGED_FILES" | jq 'length')
-if [ "$count" -gt 0 ]; then
-  echo "Asset changes detected"
-  echo "has_asset_changes=true" >> "$GITHUB_OUTPUT"
-else
-  echo "No asset changes detected — skipping asset deploy"
-  echo "has_asset_changes=false" >> "$GITHUB_OUTPUT"
-fi
-
-# ── Integration spec diff ─────────────────────────────────────────────────────
 if [ "${INCLUDE_ALL_SPEC_VERSIONS:-false}" = "true" ]; then
   SPEC_PATTERN="${INTEGRATION_MODELS_DIR}/.*\.json$"
 else
   SPEC_PATTERN="${INTEGRATION_MODELS_DIR}/.*-latest\.json$"
 fi
+ASSET_PATTERN="(${ASSET_DIRS})/.*\.json$"
+ASSET_TYPE_PATTERN="${ASSET_DIRS}|${INTEGRATION_MODELS_DIR}"
 
-CHANGED_SPECS=$(git -c core.quotePath=false diff --name-only --diff-filter=AM "$BASE_SHA" HEAD \
-  | { grep -E "$SPEC_PATTERN" || true; } | jq -R . | jq -sc .)
-echo "changed_specs: $CHANGED_SPECS"
+# ── Combined diff ────────────────────────────────────────────────────────────
+# core.quotePath=false prevents git from quoting paths that contain spaces
+ALL_CHANGED=$(git -c core.quotePath=false diff --name-only --diff-filter=AM "$BASE_SHA" HEAD \
+  | { grep -E "${ASSET_PATTERN}|${SPEC_PATTERN}" || true; } | jq -R . | jq -sc .)
+echo "changed: $ALL_CHANGED"
 
-# Use heredoc format — GitHub Actions rejects bare JSON arrays as output values
+# Tags each path with its specific folder type (e.g. "Automations", "OpenAPIs"),
+# read directly off the path rather than a plain asset-vs-spec split.
+CLASSIFIED=$(jq -c \
+  --arg pattern "$ASSET_TYPE_PATTERN" \
+  'map({
+     path: .,
+     type: (capture("/(?<type>" + $pattern + ")/") | .type)
+   })' <<< "$ALL_CHANGED")
+
+# ── Bundle grouping ────────────────────────────────────────────────────────────
+# Groups changed files by their vendor/integration folder (the direct parent of
+# an asset-type folder), e.g. "NetBox/OpenAPIs/x.json" -> bundle "NetBox". Since
+# `type` is already known per item, this is just a string split, not a regex.
+BUNDLES=$(jq -c \
+  '
+  def bundle_key:
+    (.path / ("/" + .type + "/"))[0];
+
+  group_by(bundle_key)
+  | map({
+      name: (.[0] | bundle_key),
+      changed: [.[] | {path, type}]
+    })
+  ' <<< "$CLASSIFIED")
+echo "bundles: $BUNDLES"
 {
-  echo "changed_specs<<EOF"
-  echo "$CHANGED_SPECS"
+  echo "bundles<<EOF"
+  echo "$BUNDLES"
   echo "EOF"
 } >> "$GITHUB_OUTPUT"
-count=$(echo "$CHANGED_SPECS" | jq 'length')
-if [ "$count" -gt 0 ]; then
-  echo "Found $count changed spec(s)"
-  echo "has_spec_changes=true" >> "$GITHUB_OUTPUT"
-else
-  echo "No integration spec changes detected — skipping integration deploy"
-  echo "has_spec_changes=false" >> "$GITHUB_OUTPUT"
-fi
