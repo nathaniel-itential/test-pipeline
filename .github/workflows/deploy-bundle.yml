@@ -16,8 +16,6 @@ on:
         required: true
         type: string
 
-run-name: "Deploy bundle: ${{ inputs.bundle_name }} (PR #${{ inputs.pr_number }})"
-
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -60,7 +58,7 @@ jobs:
             ["Automations"]="automation"
             ["Golden Configs"]="gctree"
             ["Agent Projects"]="agent-project"
-            ["LCM Resource Models"]="template"
+            ["LCM Resource Models"]="model"
             ["OpenAPIs"]="integration-model"
           )
 

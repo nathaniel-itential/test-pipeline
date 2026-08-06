@@ -31,6 +31,7 @@ jobs:
             run: bash "$GITHUB_WORKSPACE/.github/scripts/diff.sh"
 
     deploy:
+        name: "Deploy ${{ matrix.bundle.name }}"
         needs: [diff]
         if: needs.diff.outputs.bundles != '[]'
         strategy:
