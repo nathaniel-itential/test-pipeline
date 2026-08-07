@@ -56,7 +56,7 @@ jobs:
           declare -A NOUN_FOR_TYPE=(
             ["Studio Projects"]="project"
             ["Automations"]="automation"
-            ["Golden Configs"]="gctree"
+            ["Golden Configurations"]="gctree"
             ["Agent Projects"]="agent-project"
             ["LCM Resource Models"]="model"
             ["OpenAPIs"]="integration-model"
