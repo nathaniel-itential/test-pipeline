@@ -31,13 +31,14 @@ CLASSIFIED=$(jq -c \
    })' <<< "$ALL_CHANGED")
 
 # ── Bundle grouping ────────────────────────────────────────────────────────────
-# Groups changed files by their vendor/integration folder (the direct parent of
-# an asset-type folder), e.g. "NetBox/OpenAPIs/x.json" -> bundle "NetBox". Since
-# `type` is already known per item, this is just a string split, not a regex.
+# Groups changed files by their product folder (the direct parent of an
+# asset-type folder), e.g. "NetBox/OpenAPIs/x.json" -> bundle "NetBox", and
+# "Atlassian/Jira Cloud/OpenAPIs/x.json" -> bundle "Jira Cloud" (not
+# "Atlassian/Jira Cloud" -- only the last segment before the type folder).
 BUNDLES=$(jq -c \
   '
   def bundle_key:
-    (.path / ("/" + .type + "/"))[0];
+    ((.path / ("/" + .type + "/"))[0] / "/")[-1];
 
   group_by(bundle_key)
   | map({
