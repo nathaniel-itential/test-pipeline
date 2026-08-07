@@ -2,7 +2,7 @@
 set -euo pipefail
 
 : "${BASE_SHA:?BASE_SHA environment variable must be set}"
-ASSET_DIRS="Studio Projects|Agent Projects|Automations|LCM Resource Models|Golden Configs"
+ASSET_DIRS="Studio Projects|Agent Projects|Automations|LCM Resource Models|Golden Configurations"
 INTEGRATION_MODELS_DIR="OpenAPIs"
 
 echo "Diffing against merge base $BASE_SHA"
